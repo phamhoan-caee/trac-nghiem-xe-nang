@@ -1,5 +1,5 @@
 // --- CẤU HÌNH ---
-        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyFfsbggthMpC4mCJJAVjVgiVbbPG1SaquMKDhZZlbWXa0H9hAz4-6YPnFBA0zxtgQ0/exec";
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbz0Q3JLjr5UzRF8wzgKXS43nhil8HNYVGi6O2eZ7g9FqDlSq4dzA8sKX1S5V1xyii16/exec";
         
         let rawData = []; // Ngân hàng đề từ Sheets
         let currentQuestions = [];
@@ -81,3 +81,4 @@
             
             // ... (Các phần hiển thị kết quả giữ nguyên như thầy đã viết)
         }
+
