@@ -1,80 +1,83 @@
-// --- CẤU HÌNH HỆ THỐNG ---
-const EXAM_TIME_MINUTES = 20; 
-const TOTAL_QUESTIONS_TO_SHOW = 30; // Đã đặt định dạng 30 câu
-const PASS_SCORE = 25; 
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyFfsbggthMpC4mCJJAVjVgiVbbPG1SaquMKDhZZlbWXa0H9hAz4-6YPnFBA0zxtgQ0/exec";
+// --- CẤU HÌNH ---
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyFfsbggthMpC4mCJJAVjVgiVbbPG1SaquMKDhZZlbWXa0H9hAz4-6YPnFBA0zxtgQ0/exec";
+        
+        let rawData = []; // Ngân hàng đề từ Sheets
+        let currentQuestions = [];
+        let userAnswers = {};
+        let timeLeft = 20 * 60;
+        let timer;
 
-// --- BIẾN TOÀN CỤC ---
-let rawData = []; // Chứa toàn bộ câu hỏi từ Sheets
-let examQuestions = [];
-let currentIndex = 0;
-let userScore = 0;
-let timerInterval;
-let timeLeft = EXAM_TIME_MINUTES * 60;
-let studentName = "";
+        // Tự động tải dữ liệu khi mở trang
+        window.onload = async () => {
+            try {
+                const response = await fetch(WEB_APP_URL);
+                rawData = await response.json();
+                console.log("Đã tải " + rawData.length + " câu hỏi từ Sheets");
+            } catch (e) {
+                alert("Lỗi kết nối dữ liệu Sheets!");
+            }
+        };
 
-// Tự động tải dữ liệu ngay khi mở web
-window.onload = async () => {
-    try {
-        const response = await fetch(WEB_APP_URL);
-        rawData = await response.json();
-        console.log("Đã tải ngân hàng đề!");
-    } catch (e) {
-        console.error("Lỗi tải đề:", e);
-    }
-};
+        function startExam() {
+            const name = document.getElementById('name').value;
+            const cls = document.getElementById('class').value;
+            if(!name || !cls) return alert("Vui lòng nhập đầy đủ thông tin!");
+            
+            if(rawData.length === 0) return alert("Đang tải đề, thầy đợi xíu nhé!");
 
-function startExam() {
-    studentName = document.getElementById('student-name').value.trim();
-    if (!studentName) {
-        alert("Vui lòng nhập Họ tên học viên!");
-        return;
-    }
-
-    if (rawData.length === 0) {
-        alert("Đang tải dữ liệu, thầy đợi 3 giây rồi bấm lại nhé!");
-        return;
-    }
-
-    // Trộn và lấy đúng 30 câu từ dữ liệu thật
-    examQuestions = shuffleArray([...rawData]).slice(0, TOTAL_QUESTIONS_TO_SHOW);
-    
-    document.getElementById('start-screen').classList.add('hidden');
-    document.getElementById('quiz-screen').classList.remove('hidden');
-
-    renderQuestion();
-    startTimer();
-}
-
-function renderQuestion() {
-    const q = examQuestions[currentIndex];
-    document.getElementById('progress').innerText = `Câu ${currentIndex + 1}/${TOTAL_QUESTIONS_TO_SHOW}`;
-    
-    // Khớp với tên cột trong Sheets của thầy
-    document.getElementById('question-text').innerText = q["Nội dung câu hỏi"];
-
-    const optionsDiv = document.getElementById('options');
-    optionsDiv.innerHTML = '';
-
-    // Gom các cột đáp án A, B, C, D vào
-    const choices = [
-        { key: "A", text: q["Đáp án A"] },
-        { key: "B", text: q["Đáp án B"] },
-        { key: "C", text: q["Đáp án C"] },
-        { key: "D", text: q["Đáp án D"] }
-    ];
-
-    choices.forEach(opt => {
-        if (opt.text) {
-            const btn = document.createElement('button');
-            btn.className = 'opt-btn btn btn-outline-primary d-block w-100 mb-2 text-start';
-            btn.innerText = `${opt.key}. ${opt.text}`;
-            // So sánh với cột "Đáp án đúng"
-            btn.onclick = () => handleAnswer(opt.key, q["Đáp án đúng"]);
-            optionsDiv.appendChild(btn);
+            // LẤY ĐÚNG 30 CÂU NGẪU NHIÊN TẠI ĐÂY
+            currentQuestions = [...rawData].sort(() => Math.random() - 0.5).slice(0, 30);
+            
+            document.getElementById('auth-view').classList.add('hidden');
+            document.getElementById('exam-view').classList.remove('hidden');
+            document.getElementById('timer').classList.remove('hidden');
+            
+            renderQuestions();
+            timer = setInterval(updateTimer, 1000);
         }
-    });
-}
 
-// Giữ nguyên hàm shuffleArray, startTimer, handleAnswer của thầy...
-// Chỉ cần thay đổi cách truy xuất dữ liệu như trên là sẽ chạy được 30 câu!
+        function renderQuestions() {
+            const container = document.getElementById('question-container');
+            container.innerHTML = currentQuestions.map((item, i) => `
+                <div class="bg-white p-6 rounded-2xl shadow-sm border mb-6">
+                    <div class="flex gap-3 mb-4">
+                        <span class="bg-blue-600 text-white w-7 h-7 rounded flex items-center justify-center font-bold shrink-0 text-sm">${i+1}</span>
+                        <h4 class="font-bold text-gray-800 text-sm leading-relaxed">${item["Nội dung câu hỏi"]}</h4>
+                    </div>
+                    
+                    ${item["HINHANH"] ? `<img src="${item["HINHANH"]}" class="w-full rounded-xl mb-4 border">` : ''}
+
+                    <div class="grid gap-3">
+                        ${["A", "B", "C", "D"].map((label) => {
+                            const optText = item["Đáp án " + label];
+                            if(!optText) return ''; // Bỏ qua nếu đáp án trống
+                            return `
+                                <div class="relative">
+                                    <input type="radio" name="q${i}" id="q${i}${label}" class="option-input hidden" onchange="selectOption(${i}, '${label}')">
+                                    <label for="q${i}${label}" class="block p-3 border-2 border-gray-100 rounded-xl cursor-pointer hover:bg-gray-50 transition-all font-medium text-gray-600 text-sm">
+                                        ${label}. ${optText}
+                                    </label>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function selectOption(qIdx, label) {
+            userAnswers[qIdx] = label;
+            document.getElementById('progress').innerText = `Tiến độ: ${Object.keys(userAnswers).length}/${currentQuestions.length}`;
+        }
+
+        function submitExam() {
+            if(timeLeft > 0 && !confirm("Bạn muốn nộp bài sát hạch?")) return;
+            clearInterval(timer);
+
+            let score = 0;
+            currentQuestions.forEach((q, i) => {
+                if(userAnswers[i] === q["Đáp án đúng"]) score++;
+            });
+            
+            // ... (Các phần hiển thị kết quả giữ nguyên như thầy đã viết)
+        }
